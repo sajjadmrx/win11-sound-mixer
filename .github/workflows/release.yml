@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        type: string
+      type:
+        description: 'Release Type'
+        required: true
+        type: choice
+        options:
+          - release
+          - beta
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Update Versions and Commit
+        shell: bash
+        run: |
+          NEW_VER="${{ github.event.inputs.version }}"
+          
+          # Update root package.json
+          if [ -f "package.json" ]; then
+            cat package.json | jq ".version = \"$NEW_VER\"" > package.json.tmp && mv package.json.tmp package.json
+          fi
+          
+          # Update tauri.conf.json
+          if [ -f "src-tauri/tauri.conf.json" ]; then
+            cat src-tauri/tauri.conf.json | jq ".version = \"$NEW_VER\"" > src-tauri/tauri.conf.json.tmp && mv src-tauri/tauri.conf.json.tmp src-tauri/tauri.conf.json
+          fi
+          
+          # Update Cargo.toml
+          if [ -f "src-tauri/Cargo.toml" ]; then
+            sed -i -e "s/^version = \".*\"/version = \"$NEW_VER\"/" src-tauri/Cargo.toml
+          fi
+          
+          # Git commit and push
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add .
+          
+          if git diff --staged --quiet; then
+            echo "No version changes to commit."
+          else
+            git commit -m "chore: bump version to $NEW_VER"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Build and Create Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tauriScript: npx tauri
+          tagName: v${{ github.event.inputs.version }}-${{ github.event.inputs.type }}
+          releaseName: 'Mixero v${{ github.event.inputs.version }} (${{ github.event.inputs.type }})'
+          releaseBody: 'Automated release for Mixero audio mixer desktop application.'
+          releaseDraft: false
+          prerelease: ${{ github.event.inputs.type == 'beta' }}
+          includeUpdaterJson: true
