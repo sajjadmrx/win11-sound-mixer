@@ -36,9 +36,9 @@ export function DeviceIcon({
     case "hdmi":
       return <Monitor className={cn("h-4 w-4", className)} />;
     case "usb":
-      return <Usb className={cn("h-4 w-4", className)} />;
+      return <Usb className={cn("h-3.5 w-3.5", className)} />;
     default:
-      return <Speaker className={cn("h-4 w-4", className)} />;
+      return <Speaker className={cn("h-3.5 w-3.5", className)} />;
   }
 }
 
@@ -117,11 +117,34 @@ export function DevicePicker({
     : selected?.name ?? "Output device";
   const description = selected?.description ?? "";
 
+  const isIconOnly = className?.includes("p-0") || className?.includes("w-6") || className?.includes("w-7");
+
   return (
     <Popover>
       <PopoverTrigger asChild>
         {children ? (
           children
+        ) : isIconOnly ? (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className={cn(
+              "flex h-6 w-6 shrink-0 items-center justify-center p-0 text-muted-foreground hover:text-foreground rounded-md transition-colors",
+              className,
+            )}
+            title={selected ? `${selected.name} (${selected.description})` : description}
+          >
+            {missing ? (
+              <AudioLines className="h-3.5 w-3.5 text-destructive" />
+            ) : selected ? (
+              <DeviceIcon
+                kind={selected.kind}
+                className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground"
+              />
+            ) : (
+              <Speaker className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
+            )}
+          </Button>
         ) : (
           <Button
             variant="outline"

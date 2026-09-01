@@ -91,42 +91,39 @@ function captureKeys(e: KeyboardEvent): string | null {
   if (e.shiftKey) mods.push("shift");
   if (e.metaKey) mods.push("super");
 
+  const code = e.code;
   const raw = e.key;
+
   if (["Control", "Alt", "Shift", "Meta"].includes(raw)) return null;
 
   let key: string | null = null;
-  const low = raw.toLowerCase();
-  if (/^[a-z0-9]$/.test(low)) key = low;
-  else if (/^f([1-9]|1\d|2[0-4])$/i.test(raw)) key = low;
-  else {
-    switch (raw) {
-      case "ArrowUp":
-        key = "up";
-        break;
-      case "ArrowDown":
-        key = "down";
-        break;
-      case "ArrowLeft":
-        key = "left";
-        break;
-      case "ArrowRight":
-        key = "right";
-        break;
-      case " ":
-        key = "space";
-        break;
-      case "Tab":
-        key = "tab";
-        break;
-      case "Enter":
-        key = "enter";
-        break;
-      case "Escape":
-        key = "esc";
-        break;
-      default:
-        key = null;
-    }
+
+  // Handle standard keys via code to be layout independent
+  if (/^Key([A-Z])$/i.test(code)) {
+    key = code.replace(/^Key/i, "").toLowerCase();
+  } else if (/^Digit([0-9])$/i.test(code)) {
+    key = code.replace(/^Digit/i, "");
+  } else if (/^F([1-9]|1\d|2[0-4])$/i.test(code)) {
+    key = code.toLowerCase();
+  } else if (code === "ArrowUp" || raw === "ArrowUp") {
+    key = "up";
+  } else if (code === "ArrowDown" || raw === "ArrowDown") {
+    key = "down";
+  } else if (code === "ArrowLeft" || raw === "ArrowLeft") {
+    key = "left";
+  } else if (code === "ArrowRight" || raw === "ArrowRight") {
+    key = "right";
+  } else if (code === "Space" || raw === " ") {
+    key = "space";
+  } else if (code === "Tab" || raw === "Tab") {
+    key = "tab";
+  } else if (code === "Enter" || raw === "Enter") {
+    key = "enter";
+  } else if (code === "Escape" || raw === "Escape") {
+    key = "esc";
+  } else {
+    const low = raw.toLowerCase();
+    if (/^[a-z0-9]$/.test(low)) key = low;
   }
 
   if (!key) return null;

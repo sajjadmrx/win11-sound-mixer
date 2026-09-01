@@ -47,19 +47,33 @@ function QuickRow({ app }: { app: AppInfo }) {
   const icons = useStore((s) => s.icons);
   const setAppVolume = useStore((s) => s.setAppVolume);
   const toggleAppMute = useStore((s) => s.toggleAppMute);
+  const setAppDevice = useStore((s) => s.setAppDevice);
   const icon = icons[app.id] ?? app.icon;
 
   return (
-    <div className="flex h-10 items-center gap-2.5 rounded-lg px-2 transition-colors hover:bg-accent/40">
+    <div className="group flex h-10 items-center gap-2 rounded-lg px-2 transition-colors hover:bg-accent/40">
       <AppIcon
         appId={app.id}
         name={app.display_name}
         icon={icon}
         className="h-6 w-6 shrink-0 rounded-md"
       />
-      <div className="w-[84px] min-w-0 shrink-0 truncate text-[12.5px] font-medium text-foreground/95">
+      <div className="w-[84px] min-w-0 shrink-0 truncate text-[12px] font-medium text-foreground/95" title={app.display_name}>
         {app.display_name}
       </div>
+
+      <DevicePicker
+        compact
+        value={app.routed_device}
+        onSelect={(id) => setAppDevice(app.id, id)}
+        align="start"
+        className="h-6 w-6 shrink-0 p-0 border-none bg-transparent hover:bg-accent/80 text-muted-foreground hover:text-foreground"
+        header={{
+          title: "Select Output Device",
+          subtitle: `${app.display_name} · Routing`,
+        }}
+      />
+
       <div className="min-w-0 flex-1">
         <VolumeSlider
           value={[app.volume]}
@@ -72,7 +86,7 @@ function QuickRow({ app }: { app: AppInfo }) {
       </div>
       <span
         className={cn(
-          "w-8 shrink-0 text-right text-[11.5px] font-semibold tabular-nums",
+          "w-7 shrink-0 text-right text-[11px] font-semibold tabular-nums",
           app.mute ? "text-muted-foreground" : "text-foreground",
         )}
       >
@@ -82,7 +96,7 @@ function QuickRow({ app }: { app: AppInfo }) {
         muted={app.mute}
         onToggle={() => toggleAppMute(app.id)}
         size="sm"
-        className="h-6 w-6"
+        className="h-6 w-6 shrink-0"
       />
     </div>
   );

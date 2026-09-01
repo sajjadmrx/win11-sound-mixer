@@ -79,23 +79,32 @@ pub fn position_popup(window: &tauri::WebviewWindow, cursor: PhysicalPosition<f6
 /// monitor (above the taskbar).
 pub fn show_quick(app: &AppHandle) {
     let Some(window) = app.get_webview_window("quick") else {
+        crate::engine::log("show_quick: window 'quick' not found");
         return;
     };
     if window.is_visible().unwrap_or(false) {
         let _ = window.hide();
         return;
     }
-    let scale = window.scale_factor().unwrap_or(1.0);
-    if let Some(monitor) = window.primary_monitor().ok().flatten() {
-        let size = window.outer_size().unwrap_or(tauri::PhysicalSize::new(372, 430));
+    let monitor = window
+        .current_monitor()
+        .ok()
+        .flatten()
+        .or_else(|| window.primary_monitor().ok().flatten());
+
+    if let Some(monitor) = monitor {
+        let scale = monitor.scale_factor();
+        let size = window.outer_size().unwrap_or(tauri::PhysicalSize::new((372.0 * scale) as u32, (430.0 * scale) as u32));
         let msize = monitor.size();
         let mpos = monitor.position();
-        // Reserve room for the Windows taskbar.
-        let taskbar = if scale > 1.0 { 60.0 * scale } else { 48.0 };
+        let taskbar = 48.0 * scale;
         let x = mpos.x as f64 + msize.width as f64 - size.width as f64 - 16.0 * scale;
         let y = mpos.y as f64 + msize.height as f64 - size.height as f64 - taskbar;
         let _ = window.set_position(tauri::PhysicalPosition::new(x as i32, y as i32));
     }
     let _ = window.show();
+    let _ = window.unminimize();
+    let _ = window.set_always_on_top(true);
     let _ = window.set_focus();
+    let _ = window.request_user_attention(None);
 }

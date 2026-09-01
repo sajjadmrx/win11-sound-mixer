@@ -87,7 +87,7 @@ fn now_ms() -> i64 {
         .unwrap_or(0)
 }
 
-fn log(msg: &str) {
+pub fn log(msg: &str) {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
