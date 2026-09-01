@@ -43,20 +43,22 @@ jobs:
         shell: bash
         run: |
           NEW_VER="${{ github.event.inputs.version }}"
+          # Strip leading 'v' if user typed e.g. v1.0.0
+          CLEAN_VER="${NEW_VER#v}"
           
           # Update root package.json
           if [ -f "package.json" ]; then
-            cat package.json | jq ".version = \"$NEW_VER\"" > package.json.tmp && mv package.json.tmp package.json
+            node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json')); p.version='$CLEAN_VER'; fs.writeFileSync('package.json', JSON.stringify(p, null, 2));"
           fi
           
           # Update tauri.conf.json
           if [ -f "src-tauri/tauri.conf.json" ]; then
-            cat src-tauri/tauri.conf.json | jq ".version = \"$NEW_VER\"" > src-tauri/tauri.conf.json.tmp && mv src-tauri/tauri.conf.json.tmp src-tauri/tauri.conf.json
+            node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')); p.version='$CLEAN_VER'; fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(p, null, 2));"
           fi
           
           # Update Cargo.toml
           if [ -f "src-tauri/Cargo.toml" ]; then
-            sed -i -e "s/^version = \".*\"/version = \"$NEW_VER\"/" src-tauri/Cargo.toml
+            sed -i -e "s/^version = \".*\"/version = \"$CLEAN_VER\"/" src-tauri/Cargo.toml
           fi
           
           # Git commit and push
@@ -67,7 +69,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No version changes to commit."
           else
-            git commit -m "chore: bump version to $NEW_VER"
+            git commit -m "chore: bump version to $CLEAN_VER"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
@@ -76,8 +78,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: npx tauri
           tagName: v${{ github.event.inputs.version }}-${{ github.event.inputs.type }}
@@ -85,4 +85,3 @@ jobs:
           releaseBody: 'Automated release for Mixero audio mixer desktop application.'
           releaseDraft: false
           prerelease: ${{ github.event.inputs.type == 'beta' }}
-          includeUpdaterJson: true
