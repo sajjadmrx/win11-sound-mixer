@@ -265,8 +265,30 @@ export const useStore = create<MixeroStore>((set, get) => ({
   },
   setSort: (mode) => get().patchSettings({ sort: mode }),
 
-  applyProfile: (id) => {
-    set({ lastAppliedProfile: id });
+    applyProfile: (id) => {
+    const profile = get().profiles.find((p) => p.id === id);
+    if (profile) {
+      const now = Date.now();
+      profile.apps.forEach((app) => {
+        lastCallTime[app.exe] = now;
+      });
+      if (profile.master_volume !== undefined) {
+        lastCallTime["master"] = now;
+      }
+      set((s) => ({
+        lastAppliedProfile: id,
+        apps: s.apps.map((a) => {
+          const pApp = profile.apps.find((pa) => pa.exe === a.exe);
+          return pApp ? { ...a, volume: pApp.volume, mute: pApp.mute } : a;
+        }),
+        master:
+          profile.master_volume !== undefined && profile.master_volume !== null
+            ? { ...s.master, volume: profile.master_volume }
+            : s.master,
+      }));
+    } else {
+      set({ lastAppliedProfile: id });
+    }
     api.applyProfile(id);
   },
   captureCurrentProfile: async (name, emoji) => {

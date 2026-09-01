@@ -795,7 +795,7 @@ impl Engine {
             let is_match = sess.exe == id || sess.sid == id || (sess_pid != 0 && pids.contains(&sess_pid));
             if is_match {
                 matched += 1;
-                let res = unsafe { sess.simple.SetMasterVolume(v / 100.0, std::ptr::null()) };
+                let res = unsafe { sess.simple.SetMasterVolume(v / 100.0, &MIXERO_CONTEXT) };
                 log(&format!("set_app_volume on sess {} (pid {}): res={:?}", sess.sid, sess_pid, res));
                 sess.volume = v;
                 self.suppressed.insert(sess.sid.clone());
@@ -1003,9 +1003,13 @@ impl Engine {
         let Some(profile) = cfg.profiles.iter().find(|p| p.id == id).cloned() else {
             return;
         };
+
+        // Clear any pending memory restoration tasks so they don't overwrite the applied profile
+        self.due.retain(|t| !matches!(&t.kind, DueKind::ApplyMemory { .. }));
+
         for app in &profile.apps {
             if self.apps.contains_key(&app.exe) {
-                self.set_app_volume(&app.exe, app.volume, false);
+                self.set_app_volume(&app.exe, app.volume, true);
                 self.set_app_mute(&app.exe, app.mute);
             }
         }
@@ -1446,9 +1450,7 @@ impl Engine {
     }
 }
 
-// ---------------------------------------------------------------------------
-// COM event callbacks
-// ---------------------------------------------------------------------------
+static MIXERO_CONTEXT: windows::core::GUID = windows::core::GUID::from_u128(0x94829348_a234_4b8e_9023_893284928349);
 
 #[windows::core::implement(IMMNotificationClient)]
 struct DeviceNotifier {
@@ -1523,8 +1525,12 @@ impl windows::Win32::Media::Audio::IAudioSessionEvents_Impl for SessionEvents_Im
         &self,
         newvolume: f32,
         newmute: BOOL,
-        _eventcontext: *const windows::core::GUID,
+        eventcontext: *const windows::core::GUID,
     ) -> windows::core::Result<()> {
+        if !eventcontext.is_null() && unsafe { *eventcontext } == MIXERO_CONTEXT {
+            // Echo of our own change
+            return Ok(());
+        }
         let _ = self.tx.send(EngineMsg::SessionVolumeChanged {
             sid: self.sid.clone(),
             volume: newvolume,
