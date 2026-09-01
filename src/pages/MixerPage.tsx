@@ -205,22 +205,22 @@ function OutputDeviceCard() {
         title: "Select Output Device",
       }}
     >
-      <div className="group flex h-[76px] items-center gap-3.5 rounded-xl border border-border/70 bg-card px-4 transition-colors hover:border-border hover:bg-elevated/40 cursor-pointer">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-elevated text-foreground">
-          <DeviceIcon kind={device.kind} className="h-5 w-5" />
+      <div className="group flex h-[64px] items-center gap-3 rounded-xl border border-border/70 bg-card px-3.5 transition-colors hover:border-border hover:bg-elevated/40 cursor-pointer">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-elevated text-foreground">
+          <DeviceIcon kind={device.kind} className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-medium leading-none text-muted-foreground">
+          <div className="text-[10.5px] font-medium leading-none text-muted-foreground">
             Output Device
           </div>
-          <div className="mt-1 truncate text-[14.5px] font-semibold leading-tight text-foreground">
+          <div className="mt-1 truncate text-[13.5px] font-semibold leading-tight text-foreground">
             {device.name}
           </div>
-          <div className="mt-0.5 truncate text-[11.5px] leading-none text-muted-foreground">
+          <div className="mt-0.5 truncate text-[11px] leading-none text-muted-foreground">
             {device.description}
           </div>
         </div>
-        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground/70 transition-transform group-hover:translate-y-0.5" />
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-transform group-hover:translate-y-0.5" />
       </div>
     </DevicePicker>
   );
@@ -246,16 +246,16 @@ function MasterSection() {
   };
 
   return (
-    <div className="flex h-[76px] flex-col justify-between rounded-xl border border-border/70 bg-card px-4 py-3">
-      <div className="text-[11px] font-medium leading-none text-muted-foreground">
+    <div className="flex h-[64px] flex-col justify-between rounded-xl border border-border/70 bg-card px-3.5 py-2.5">
+      <div className="text-[10.5px] font-medium leading-none text-muted-foreground">
         Master Volume
       </div>
-      <div className="flex items-center gap-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
           {master.mute ? (
-            <VolumeX className="h-4 w-4" />
+            <VolumeX className="h-3.5 w-3.5" />
           ) : (
-            <Volume2 className="h-4 w-4" />
+            <Volume2 className="h-3.5 w-3.5" />
           )}
         </span>
         <div className="min-w-0 flex-1" onWheel={onWheel}>
@@ -270,7 +270,7 @@ function MasterSection() {
         </div>
         <span
           className={cn(
-            "w-9 shrink-0 text-right text-[13px] font-semibold tabular-nums",
+            "w-8 shrink-0 text-right text-[12px] font-semibold tabular-nums",
             master.mute ? "text-muted-foreground" : "text-foreground",
           )}
         >

@@ -48,6 +48,7 @@ pub fn toggle_tray_popup(app: &AppHandle, cursor: PhysicalPosition<f64>) {
         let _ = window.hide();
         return;
     }
+    let _ = window.set_size(tauri::LogicalSize::new(240.0, 170.0));
     position_popup(&window, cursor);
     let _ = window.show();
     let _ = window.set_focus();

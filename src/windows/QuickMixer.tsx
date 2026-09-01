@@ -129,9 +129,11 @@ export function QuickMixer() {
         data-tauri-drag-region
         className="flex h-9 shrink-0 items-center gap-2 border-b border-border/70 px-3"
       >
-        <span className="flex h-4 w-4 items-center justify-center text-primary">
-          <AudioLines className="h-4 w-4" />
-        </span>
+        <img
+          src="/app-icon.png"
+          alt="Mixero"
+          className="h-4 w-4 rounded-[3px] object-contain select-none pointer-events-none"
+        />
         <span className="text-[13px] font-semibold tracking-tight">Mixero</span>
         <div className="ml-auto flex items-center gap-1">
           <IconBtn

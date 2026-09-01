@@ -48,49 +48,49 @@ export function TrayMenu() {
   };
 
   return (
-    <div className="flex h-full flex-col justify-center bg-card/95 p-1.5 text-foreground select-none">
-      <div className="space-y-0.5 text-[13px] font-medium">
+    <div className="flex h-full flex-col justify-start bg-card/95 p-1.5 text-foreground select-none">
+      <div className="space-y-0.5 text-[12.5px] font-medium">
         <button
           onClick={() => openMixer("mixer")}
-          className="flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 transition-colors hover:bg-accent hover:text-foreground text-foreground/90"
+          className="flex h-7 w-full items-center gap-2 rounded-md px-2 transition-colors hover:bg-accent hover:text-foreground text-foreground/90"
         >
-          <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+          <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
           <span>Open Mixer</span>
         </button>
 
         <button
           onClick={toggleMasterMute}
-          className="flex h-8 w-full items-center justify-between rounded-md px-2.5 transition-colors hover:bg-accent hover:text-foreground text-foreground/90"
+          className="flex h-7 w-full items-center justify-between rounded-md px-2 transition-colors hover:bg-accent hover:text-foreground text-foreground/90"
         >
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             {master.mute ? (
-              <VolumeX className="h-4 w-4 text-destructive" />
+              <VolumeX className="h-3.5 w-3.5 text-destructive" />
             ) : (
-              <Volume2 className="h-4 w-4 text-muted-foreground" />
+              <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
             )}
             <span>Master Mute</span>
           </div>
           {master.mute && (
-            <span className="text-[11px] text-destructive font-normal">Muted</span>
+            <span className="text-[10.5px] text-destructive font-normal">Muted</span>
           )}
         </button>
 
         <div>
           <button
             onClick={() => setDeviceMenuOpen(!deviceMenuOpen)}
-            className="flex h-8 w-full items-center justify-between rounded-md px-2.5 transition-colors hover:bg-accent hover:text-foreground text-foreground/90"
+            className="flex h-7 w-full items-center justify-between rounded-md px-2 transition-colors hover:bg-accent hover:text-foreground text-foreground/90"
           >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <Speaker className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <div className="flex items-center gap-2 min-w-0">
+              <Speaker className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <span>Output Device</span>
             </div>
             <div className="flex items-center gap-1 min-w-0">
-              <span className="truncate max-w-28 text-[12px] text-muted-foreground">
+              <span className="truncate max-w-24 text-[11.5px] text-muted-foreground">
                 {defaultDevice?.name ?? "Speakers"}
               </span>
               <ChevronRight
                 className={cn(
-                  "h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-transform",
+                  "h-3 w-3 shrink-0 text-muted-foreground/70 transition-transform",
                   deviceMenuOpen && "rotate-90",
                 )}
               />
@@ -98,7 +98,7 @@ export function TrayMenu() {
           </button>
 
           {deviceMenuOpen && (
-            <div className="my-1 ml-4 space-y-0.5 border-l border-border/80 pl-2">
+            <div className="my-1 ml-3 space-y-0.5 border-l border-border/80 pl-1.5">
               {activeDevices.map((d) => (
                 <button
                   key={d.id}
@@ -107,18 +107,18 @@ export function TrayMenu() {
                     setDeviceMenuOpen(false);
                   }}
                   className={cn(
-                    "flex h-7 w-full items-center justify-between rounded px-2 text-[12px] transition-colors",
+                    "flex h-6 w-full items-center justify-between rounded px-1.5 text-[11.5px] transition-colors",
                     d.id === defaultDeviceId
                       ? "bg-primary/15 text-primary font-semibold"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
-                  <div className="flex items-center gap-2 truncate">
+                  <div className="flex items-center gap-1.5 truncate">
                     <DeviceIcon kind={d.kind} className="h-3 w-3" />
                     <span className="truncate">{d.name}</span>
                   </div>
                   {d.id === defaultDeviceId && (
-                    <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+                    <Check className="h-3 w-3 shrink-0 text-primary" />
                   )}
                 </button>
               ))}
@@ -130,17 +130,17 @@ export function TrayMenu() {
 
         <button
           onClick={() => openMixer("settings")}
-          className="flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 transition-colors hover:bg-accent hover:text-foreground text-foreground/90"
+          className="flex h-7 w-full items-center gap-2 rounded-md px-2 transition-colors hover:bg-accent hover:text-foreground text-foreground/90"
         >
-          <Settings className="h-4 w-4 text-muted-foreground" />
+          <Settings className="h-3.5 w-3.5 text-muted-foreground" />
           <span>Settings</span>
         </button>
 
         <button
           onClick={() => void api.quit()}
-          className="flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 transition-colors hover:bg-destructive/15 hover:text-destructive text-foreground/90"
+          className="flex h-7 w-full items-center gap-2 rounded-md px-2 transition-colors hover:bg-destructive/15 hover:text-destructive text-foreground/90"
         >
-          <Power className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+          <Power className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
           <span>Quit</span>
         </button>
       </div>

@@ -43,9 +43,11 @@ export function TitleBar() {
         data-tauri-drag-region
         className="flex h-full min-w-0 flex-1 items-center gap-2.5"
       >
-        <span className="flex h-5 w-5 items-center justify-center rounded-[6px] bg-primary/15">
-          <span className="h-2 w-2 rounded-[3px] bg-primary" />
-        </span>
+        <img
+          src="/app-icon.png"
+          alt="Mixero"
+          className="h-[18px] w-[18px] rounded-[4px] object-contain select-none pointer-events-none"
+        />
         <span className="text-[13px] font-semibold tracking-tight">Mixero</span>
         <span className="hidden text-[11px] text-muted-foreground sm:block">
           Audio Mixer

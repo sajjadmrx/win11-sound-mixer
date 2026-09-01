@@ -47,8 +47,8 @@
         "label": "tray",
         "title": "Mixero Menu",
         "url": "index.html#/tray",
-        "width": 300,
-        "height": 380,
+        "width": 240,
+        "height": 170,
         "resizable": false,
         "decorations": false,
         "transparent": false,
@@ -62,12 +62,6 @@
     ],
     "security": {
       "csp": null
-    },
-    "trayIcon": {
-      "id": "mixero-tray",
-      "iconPath": "icons/icon.ico",
-      "iconAsTemplate": false,
-      "tooltip": "Mixero - Audio Mixer"
     }
   },
   "bundle": {
