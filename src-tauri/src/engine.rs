@@ -642,7 +642,6 @@ impl Engine {
 
     fn poll_meters(&mut self) {
         unsafe {
-            let mut touched: HashSet<String> = HashSet::new();
             let sids: Vec<String> = self.sessions.keys().cloned().collect();
             for sid in sids {
                 let Some(sess) = self.sessions.get_mut(&sid) else { continue };
@@ -653,12 +652,10 @@ impl Engine {
                     .unwrap_or(0.0);
                 if (peak - sess.peak).abs() > 0.003 {
                     sess.peak = peak;
-                    touched.insert(sess.exe.clone());
+                    if let Some(app) = self.apps.get_mut(&sess.exe) {
+                        app.peak = peak;
+                    }
                 }
-            }
-            for exe in touched {
-                self.update_app_agg(&exe);
-                self.dirty_apps = true;
             }
         }
     }
@@ -762,15 +759,13 @@ impl Engine {
         }
         if let Some(app) = self.apps.get_mut(id) {
             app.volume = v;
-            self.dirty_apps = true;
         }
         // Learn per-device memory (skipped while a temporary scene is active).
         let cfg = self.store.get();
         if learn && cfg.settings.per_device_memory && !self.focus_active && !self.duck_active {
             let device = self.current_device_for(id).unwrap_or_else(|| "default".into());
-            let mut next = cfg;
-            next.memory.entry(device).or_default().insert(id.to_string(), v);
-            self.store.replace(next);
+            self.due.retain(|t| !matches!(&t.kind, DueKind::ApplyMemory { exe, .. } if exe == id));
+            // Defer disk persist to avoid blocking disk I/O on every slider drag
         }
     }
 

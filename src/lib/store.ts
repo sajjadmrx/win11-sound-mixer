@@ -74,6 +74,10 @@ interface MixeroStore {
 
 let subscribed = false;
 
+let lastCallTime: Record<string, number> = {};
+let lastSentTime: Record<string, number> = {};
+let pendingCalls: Record<string, { vol: number; timer: ReturnType<typeof setTimeout> }> = {};
+
 export const useStore = create<MixeroStore>((set, get) => ({
   loaded: false,
   devices: [],
@@ -133,10 +137,33 @@ export const useStore = create<MixeroStore>((set, get) => ({
     if (subscribed) return;
     subscribed = true;
     subscribeEvents({
-      onApps: (apps) => set({ apps }),
+      onApps: (incomingApps) => {
+        set((s) => {
+          // If the user recently changed volume locally, keep the local volume until the debounce settles
+          const merged = incomingApps.map((inc) => {
+            const lastTouch = lastCallTime[inc.id] ?? 0;
+            if (Date.now() - lastTouch < 500) {
+              const current = s.apps.find((a) => a.id === inc.id);
+              if (current) {
+                return { ...inc, volume: current.volume };
+              }
+            }
+            return inc;
+          });
+          return { apps: merged };
+        });
+      },
       onDevices: (devices, defaultId) =>
         set({ devices, defaultDeviceId: defaultId }),
-      onMaster: (master) => set({ master }),
+      onMaster: (incomingMaster) => {
+        set((s) => {
+          const lastTouch = lastCallTime["master"] ?? 0;
+          if (Date.now() - lastTouch < 500) {
+            return { master: { ...incomingMaster, volume: s.master.volume } };
+          }
+          return { master: incomingMaster };
+        });
+      },
       onSettings: (settings) => {
         set({ settings });
         applyTheme(settings.theme);
@@ -161,8 +188,30 @@ export const useStore = create<MixeroStore>((set, get) => ({
 
   setMasterVolume: (v) => {
     const vol = clamp(Math.round(v), 0, 100);
+    lastCallTime["master"] = Date.now();
     set((s) => ({ master: { ...s.master, volume: vol } }));
-    api.setMasterVolume(vol);
+    const now = Date.now();
+    const last = lastSentTime["master"] ?? 0;
+    if (now - last > 30) {
+      lastSentTime["master"] = now;
+      if (pendingCalls["master"]) {
+        clearTimeout(pendingCalls["master"].timer);
+        delete pendingCalls["master"];
+      }
+      api.setMasterVolume(vol);
+    } else {
+      if (pendingCalls["master"]) {
+        clearTimeout(pendingCalls["master"].timer);
+      }
+      pendingCalls["master"] = {
+        vol,
+        timer: setTimeout(() => {
+          lastSentTime["master"] = Date.now();
+          api.setMasterVolume(vol);
+          delete pendingCalls["master"];
+        }, 30),
+      };
+    }
   },
   toggleMasterMute: () => {
     const mute = !get().master.mute;
@@ -171,10 +220,33 @@ export const useStore = create<MixeroStore>((set, get) => ({
   },
   setAppVolume: (id, v) => {
     const vol = clamp(Math.round(v), 0, 100);
+    lastCallTime[id] = Date.now();
     set((s) => ({
       apps: s.apps.map((a) => (a.id === id ? { ...a, volume: vol } : a)),
     }));
-    api.setAppVolume(id, vol);
+
+    const last = lastSentTime[id] ?? 0;
+    const now = Date.now();
+    if (now - last > 30) {
+      lastSentTime[id] = now;
+      if (pendingCalls[id]) {
+        clearTimeout(pendingCalls[id].timer);
+        delete pendingCalls[id];
+      }
+      api.setAppVolume(id, vol);
+    } else {
+      if (pendingCalls[id]) {
+        clearTimeout(pendingCalls[id].timer);
+      }
+      pendingCalls[id] = {
+        vol,
+        timer: setTimeout(() => {
+          lastSentTime[id] = Date.now();
+          api.setAppVolume(id, vol);
+          delete pendingCalls[id];
+        }, 30),
+      };
+    }
   },
   toggleAppMute: (id) => {
     const app = get().apps.find((a) => a.id === id);
@@ -291,13 +363,11 @@ export function visibleApps(
       break;
     case "currently-playing":
     default:
-      sorted.sort((a, b) => {
-        if (a.active !== b.active) return a.active ? -1 : 1;
-        if (a.active && b.active) return b.peak - a.peak;
-        return a.display_name
+      sorted.sort((a, b) =>
+        a.display_name
           .toLowerCase()
-          .localeCompare(b.display_name.toLowerCase());
-      });
+          .localeCompare(b.display_name.toLowerCase()),
+      );
       break;
   }
   return sorted;

@@ -118,11 +118,10 @@ export function QuickMixer() {
   };
 
   const rows = [...apps]
-    .sort((a, b) => {
-      if (a.active !== b.active) return a.active ? -1 : 1;
-      return b.volume - a.volume;
-    })
-    .slice(0, 6);
+    .sort((a, b) =>
+      a.display_name.toLowerCase().localeCompare(b.display_name.toLowerCase()),
+    )
+    .slice(0, 8);
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background text-foreground select-none">
@@ -162,9 +161,6 @@ export function QuickMixer() {
             }}
             align="start"
             className="h-7 w-[100px] text-[11.5px] px-2"
-            header={{
-              title: "Select Output Device",
-            }}
           />
           <VolumeLevelIcon
             volume={master.volume}

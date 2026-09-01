@@ -65,7 +65,10 @@ export function Sidebar() {
           </div>
           <Switch
             checked={false}
-            onCheckedChange={() => void api.openQuickMixer()}
+            onCheckedChange={() => {
+              void api.openQuickMixer();
+              void api.minimizeWindow("main");
+            }}
             className="scale-90"
             aria-label="Toggle Mini Mode"
           />

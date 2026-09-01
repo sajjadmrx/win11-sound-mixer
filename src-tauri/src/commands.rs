@@ -243,6 +243,9 @@ pub fn open_main_mixer(app: AppHandle) {
 
 #[tauri::command]
 pub fn open_quick_mixer(app: AppHandle) {
+    app.state::<crate::UiFlags>()
+        .quick_pinned
+        .store(true, Ordering::Relaxed);
     crate::tray::show_quick(&app);
 }
 

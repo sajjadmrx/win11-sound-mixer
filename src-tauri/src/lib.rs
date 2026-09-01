@@ -112,11 +112,6 @@ pub fn run() {
                             if !pinned {
                                 if let Some(win) = h.get_webview_window(&label) {
                                     let _ = win.hide();
-                                    if label == "quick" {
-                                        flags.quick_pinned.store(false, std::sync::atomic::Ordering::Relaxed);
-                                    } else {
-                                        flags.tray_pinned.store(false, std::sync::atomic::Ordering::Relaxed);
-                                    }
                                 }
                             }
                         }

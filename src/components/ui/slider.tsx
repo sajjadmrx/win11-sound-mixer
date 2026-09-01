@@ -6,34 +6,41 @@ interface VolumeSliderProps
   extends React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> {
   muted?: boolean;
   trackClassName?: string;
+  onValueCommit?: (value: number[]) => void;
 }
 
 const VolumeSlider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   VolumeSliderProps
->(({ className, muted, trackClassName, onPointerDown, ...props }, ref) => (
-  <SliderPrimitive.Root
-    ref={ref}
-    className={cn("vol-slider relative", className)}
-    data-muted={muted ? "" : undefined}
-    onPointerDown={(e) => {
-      (e.currentTarget as HTMLElement).setAttribute("data-dragging", "");
-      onPointerDown?.(e);
-    }}
-    onPointerUp={(e) => {
-      (e.currentTarget as HTMLElement).removeAttribute("data-dragging");
-    }}
-    onPointerCancel={(e) => {
-      (e.currentTarget as HTMLElement).removeAttribute("data-dragging");
-    }}
-    {...props}
-  >
-    <SliderPrimitive.Track className={cn("vol-slider-track", trackClassName)}>
-      <SliderPrimitive.Range className="vol-slider-range" />
-    </SliderPrimitive.Track>
-    <SliderPrimitive.Thumb className="vol-slider-thumb" aria-label="Volume" />
-  </SliderPrimitive.Root>
-));
+>(({ className, muted, trackClassName, onPointerDown, onValueChange, onValueCommit, value, defaultValue, ...props }, ref) => {
+  return (
+    <SliderPrimitive.Root
+      ref={ref}
+      className={cn("vol-slider relative", className)}
+      data-muted={muted ? "" : undefined}
+      value={value}
+      defaultValue={defaultValue}
+      onValueChange={onValueChange}
+      onValueCommit={onValueCommit}
+      onPointerDown={(e) => {
+        (e.currentTarget as HTMLElement).setAttribute("data-dragging", "");
+        onPointerDown?.(e);
+      }}
+      onPointerUp={(e) => {
+        (e.currentTarget as HTMLElement).removeAttribute("data-dragging");
+      }}
+      onPointerCancel={(e) => {
+        (e.currentTarget as HTMLElement).removeAttribute("data-dragging");
+      }}
+      {...props}
+    >
+      <SliderPrimitive.Track className={cn("vol-slider-track", trackClassName)}>
+        <SliderPrimitive.Range className="vol-slider-range" />
+      </SliderPrimitive.Track>
+      <SliderPrimitive.Thumb className="vol-slider-thumb" aria-label="Volume" />
+    </SliderPrimitive.Root>
+  );
+});
 VolumeSlider.displayName = "VolumeSlider";
 
 export { VolumeSlider };
