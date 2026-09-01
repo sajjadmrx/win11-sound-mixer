@@ -1,0 +1,172 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 14% 97%;
+    --foreground: 240 10% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 8%;
+    --elevated: 240 14% 94%;
+    --elevated-foreground: 240 10% 8%;
+    --popover: 0 0% 99%;
+    --popover-foreground: 240 10% 8%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 10% 92%;
+    --secondary-foreground: 240 6% 20%;
+    --muted: 240 10% 93%;
+    --muted-foreground: 240 5% 42%;
+    --accent: 240 10% 92%;
+    --accent-foreground: 240 6% 16%;
+    --destructive: 351 85% 56%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 9% 87%;
+    --input: 240 9% 84%;
+    --ring: 239 84% 67%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 240 13% 4%;
+    --foreground: 240 6% 93%;
+    --card: 240 13% 7%;
+    --card-foreground: 240 6% 93%;
+    --elevated: 240 12% 9%;
+    --elevated-foreground: 240 6% 93%;
+    --popover: 240 12% 8%;
+    --popover-foreground: 240 6% 93%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 9% 14%;
+    --secondary-foreground: 240 6% 80%;
+    --muted: 240 9% 12%;
+    --muted-foreground: 240 5% 58%;
+    --accent: 240 9% 14%;
+    --accent-foreground: 240 6% 90%;
+    --destructive: 351 80% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 9% 14%;
+    --input: 240 9% 17%;
+    --ring: 239 84% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    user-select: none;
+    cursor: default;
+  }
+  input,
+  textarea {
+    user-select: text;
+  }
+}
+
+/* ---- scrollbars ---- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--secondary)) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: hsl(var(--secondary));
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---- window drag regions ---- */
+[data-tauri-drag-region] {
+  app-region: drag;
+}
+
+/* ---- volume slider (Radix) ---- */
+.vol-slider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  touch-action: none;
+  height: 20px;
+  cursor: pointer;
+}
+.vol-slider-track {
+  position: relative;
+  height: 4px;
+  width: 100%;
+  border-radius: 999px;
+  background: hsl(var(--secondary));
+  overflow: hidden;
+}
+.vol-slider-range {
+  position: absolute;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: hsl(var(--primary));
+  transition: width 90ms ease-out;
+}
+.vol-slider[data-dragging] .vol-slider-range {
+  transition: none;
+}
+.vol-slider-thumb {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #fafafa;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(0, 0, 0, 0.12);
+  outline: none;
+  transition: transform 90ms ease-out;
+}
+.vol-slider-thumb:hover {
+  transform: scale(1.12);
+}
+.vol-slider-thumb:focus-visible {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.55),
+    0 0 0 2px hsl(var(--primary) / 0.55);
+}
+.vol-slider[data-muted] .vol-slider-range {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* ---- audio activity bars ---- */
+.eq-bar {
+  width: 2px;
+  border-radius: 2px;
+  background: hsl(var(--primary) / 0.75);
+  transition: height 110ms ease-out;
+  min-height: 2px;
+}
+.eq-idle .eq-bar {
+  background: hsl(var(--foreground) / 0.14);
+}
+
+/* ---- row enter animation ---- */
+.app-row {
+  animation: fade-in-row 0.22s ease-out both;
+}
+
+/* kbd */
+.kbd {
+  @apply inline-flex h-5 min-w-5 items-center justify-center rounded-[5px] border border-border bg-elevated px-1.5 text-[10px] font-medium text-muted-foreground;
+}
