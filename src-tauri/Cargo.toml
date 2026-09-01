@@ -1,6 +1,6 @@
 [package]
 name = "mixero"
-version = "1.0.0"
+version = "1.0.1"
 description = "A premium Windows audio mixer"
 authors = ["Mixero"]
 edition = "2021"
