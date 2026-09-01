@@ -115,25 +115,31 @@ export const useStore = create<MixeroStore>((set, get) => ({
   pinned: false,
 
   init: async () => {
-    const state = await getState();
-    set({
-      loaded: true,
-      devices: state.devices,
-      defaultDeviceId: state.default_device_id,
-      apps: state.apps,
-      master: state.master,
-      settings: state.settings,
-      profiles: state.profiles,
-      rules: state.rules,
-      ducking: state.ducking,
-      focusApps: state.focus_apps,
-      safety: state.safety,
-      nightActive: state.night_active,
-      focusActive: state.focus_active,
-      duckingActive: state.ducking_active,
-      shortcuts: state.shortcuts,
-    });
-    applyTheme(state.settings.theme);
+    try {
+      const state = await getState();
+      set({
+        loaded: true,
+        devices: state.devices,
+        defaultDeviceId: state.default_device_id,
+        apps: state.apps,
+        master: state.master,
+        settings: state.settings,
+        profiles: state.profiles,
+        rules: state.rules,
+        ducking: state.ducking,
+        focusApps: state.focus_apps,
+        safety: state.safety,
+        nightActive: state.night_active,
+        focusActive: state.focus_active,
+        duckingActive: state.ducking_active,
+        shortcuts: state.shortcuts,
+      });
+      applyTheme(state.settings.theme);
+    } catch (err) {
+      console.error("Failed to load initial state from backend:", err);
+      // Ensure UI still unlocks even if get_state throws
+      set({ loaded: true });
+    }
     if (subscribed) return;
     subscribed = true;
     subscribeEvents({
