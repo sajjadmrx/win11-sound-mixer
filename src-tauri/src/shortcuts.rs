@@ -4,7 +4,7 @@ use crate::store::Store;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_global_shortcut::{
-    GlobalShortcutExt, Shortcut, ShortcutState,
+    GlobalShortcutExt, Shortcut,
 };
 
 pub fn register_all(app: &AppHandle) -> Result<(), String> {
@@ -21,13 +21,9 @@ pub fn register_all(app: &AppHandle) -> Result<(), String> {
         let shortcut: Result<Shortcut, _> = binding.keys.parse();
         match shortcut {
             Ok(sc) => {
-                if let Err(e) = gs.register(sc) {
-                    eprintln!("[mixero:shortcuts] failed to register '{}': {e}", binding.keys);
-                }
+                let _ = gs.register(sc);
             }
-            Err(e) => {
-                eprintln!("[mixero:shortcuts] invalid shortcut '{}': {e}", binding.keys);
-            }
+            Err(_) => {}
         }
     }
     Ok(())

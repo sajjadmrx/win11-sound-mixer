@@ -164,7 +164,6 @@ struct DueTask {
 }
 
 enum DueKind {
-    RestoreDefault(String),
     ApplyMemory { exe: String, device: Option<String> },
 }
 
@@ -820,29 +819,25 @@ impl Engine {
         self.route_app(id, device_id);
     }
 
-    /// Smart routing: temporarily make the target device the default so the
-    /// app's streams bind to it, then restore the previous default. Windows
-    /// binds streams to a device at creation time — this is the practical
-    /// mechanism used for per-app routing.
+    /// Native per-application audio routing via Windows AudioPolicyConfig:
+    /// Directly routes every PID of the target app to the selected endpoint.
     fn route_app(&mut self, id: &str, device_id: Option<String>) {
-        let Some(target) = device_id else { return };
-        if self.default_id.as_deref() == Some(target.as_str()) {
-            return;
+        let pids: Vec<u32> = self
+            .sessions
+            .values()
+            .filter(|s| s.exe == id)
+            .filter_map(|s| {
+                s.control2
+                    .as_ref()
+                    .and_then(|c| unsafe { c.GetProcessId() }.ok())
+            })
+            .collect();
+
+        log(&format!("route_app: exe={}, device={:?}, found {} pids: {:?}", id, device_id, pids.len(), pids));
+        for pid in pids {
+            let res = policy::set_process_audio_endpoint(pid, device_id.as_deref());
+            log(&format!("route_app result for pid {}: {:?}", pid, res));
         }
-        let Some(previous) = self.default_id.clone() else { return };
-        if policy::set_default_endpoint(&target).is_err() {
-            log("routing: failed to switch default device");
-            return;
-        }
-        let delay = if self.apps.contains_key(id) { 2500 } else { 1500 };
-        self.due.push(DueTask {
-            at: Instant::now() + Duration::from_millis(delay),
-            kind: DueKind::RestoreDefault(previous),
-        });
-        self.due.push(DueTask {
-            at: Instant::now() + Duration::from_millis(delay + 400),
-            kind: DueKind::ApplyMemory { exe: id.to_string(), device: Some(target) },
-        });
     }
 
     fn process_due(&mut self) {
@@ -852,11 +847,6 @@ impl Engine {
             if self.due[i].at <= now {
                 let task = self.due.remove(i);
                 match task.kind {
-                    DueKind::RestoreDefault(dev) => {
-                        let _ = policy::set_default_endpoint(&dev);
-                        self.endpoint_vol_id = None;
-                        self.refresh_endpoints();
-                    }
                     DueKind::ApplyMemory { exe, device } => {
                         let cfg = self.store.get();
                         if !cfg.settings.per_device_memory {
@@ -908,7 +898,7 @@ impl Engine {
             kind: DueKind::ApplyMemory { exe: exe.to_string(), device: None },
         });
         if let Some(target) = routed {
-            self.route_app(exe, Some(target));
+            // Only route when explicitly configured by user
         }
     }
 
@@ -939,7 +929,7 @@ impl Engine {
         let cache = self.icon_cache_dir();
         let tx = self.tx.clone();
         std::thread::spawn(move || {
-            let icon = path.and_then(|p| cache.get_or_extract(&key, &p));
+            let icon = path.as_deref().and_then(|p| cache.get_or_extract(&key, p));
             let _ = tx.send(EngineMsg::IconLoaded { id: key, icon });
         });
     }
@@ -1344,8 +1334,8 @@ impl Engine {
             .unwrap_or(0);
         entry.pid = pid;
         let routing = self.store.get().routing.get(exe).cloned();
-        if entry.routed_device.is_none() {
-            entry.routed_device = routing;
+        if let Some(r) = routing {
+            entry.routed_device = Some(r);
         }
     }
 
@@ -1367,7 +1357,7 @@ impl Engine {
                     peak: a.peak,
                     active: a.active,
                     pid: a.pid,
-                    icon: None,
+                    icon: a.icon.clone(),
                     routed_device: a.routed_device.clone(),
                     last_active: self.recent.get(&a.exe).copied().unwrap_or(a.last_active),
                     session_count: a.session_count,

@@ -31,26 +31,30 @@ pub fn exe_path_for_pid(pid: u32) -> Option<String> {
         }
     }
     unsafe {
-        let handle =
-            OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
-        let mut buf = [0u16; 1024];
-        let mut len = buf.len() as u32;
-        let ok = QueryFullProcessImageNameW(
-            handle,
-            PROCESS_NAME_WIN32,
-            windows::core::PWSTR(buf.as_mut_ptr()),
-            &mut len,
-        )
-        .is_ok();
-        let _ = windows::Win32::Foundation::CloseHandle(handle);
-        if !ok {
-            return None;
+        // Try QueryFullProcessImageNameW first
+        let handle_res = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
+            .or_else(|_| OpenProcess(windows::Win32::System::Threading::PROCESS_QUERY_INFORMATION | windows::Win32::System::Threading::PROCESS_VM_READ, false, pid));
+
+        if let Ok(handle) = handle_res {
+            let mut buf = [0u16; 1024];
+            let mut len = buf.len() as u32;
+            let ok = QueryFullProcessImageNameW(
+                handle,
+                PROCESS_NAME_WIN32,
+                windows::core::PWSTR(buf.as_mut_ptr()),
+                &mut len,
+            )
+            .is_ok();
+            let _ = windows::Win32::Foundation::CloseHandle(handle);
+            if ok && len > 0 {
+                let path = String::from_utf16_lossy(&buf[..len as usize]);
+                if let Ok(mut guard) = EXE_PATH_CACHE.lock() {
+                    guard.get_or_insert_with(HashMap::new).insert(pid, path.clone());
+                }
+                return Some(path);
+            }
         }
-        let path = String::from_utf16_lossy(&buf[..len as usize]);
-        if let Ok(mut guard) = EXE_PATH_CACHE.lock() {
-            guard.get_or_insert_with(HashMap::new).insert(pid, path.clone());
-        }
-        Some(path)
+        None
     }
 }
 
@@ -64,25 +68,25 @@ pub fn extract_icon_png(exe_path: &str, size: i32) -> Option<Vec<u8>> {
     unsafe {
         let mut buf = [0u16; 260];
         let chars: Vec<u16> = exe_path.encode_utf16().collect();
-        if chars.len() >= 259 {
+        if chars.len() >= 260 {
             return None;
         }
         buf[..chars.len()].copy_from_slice(&chars);
-        let mut hicon = [HICON::default(); 1];
+        let mut hicons = [HICON::default(); 1];
         let count = PrivateExtractIconsW(
             &buf,
             0,
             size,
             size,
-            Some(&mut hicon),
+            Some(&mut hicons),
             None,
-            0,
+            1,
         );
-        if count == 0 || hicon[0].is_invalid() {
+        if count == 0 || hicons[0].is_invalid() {
             return None;
         }
-        let png = hicon_to_png(hicon[0], size);
-        let _ = DestroyIcon(hicon[0]);
+        let png = hicon_to_png(hicons[0], size);
+        let _ = DestroyIcon(hicons[0]);
         png
     }
 }

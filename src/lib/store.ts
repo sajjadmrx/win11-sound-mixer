@@ -139,16 +139,21 @@ export const useStore = create<MixeroStore>((set, get) => ({
     subscribeEvents({
       onApps: (incomingApps) => {
         set((s) => {
-          // If the user recently changed volume locally, keep the local volume until the debounce settles
+          // If the user recently changed volume or device locally, keep the local state until the debounce settles
           const merged = incomingApps.map((inc) => {
+            const current = s.apps.find((a) => a.id === inc.id);
+            if (!current) return inc;
+
             const lastTouch = lastCallTime[inc.id] ?? 0;
-            if (Date.now() - lastTouch < 500) {
-              const current = s.apps.find((a) => a.id === inc.id);
-              if (current) {
-                return { ...inc, volume: current.volume };
-              }
-            }
-            return inc;
+            const volume = Date.now() - lastTouch < 500 ? current.volume : inc.volume;
+            // Always retain the locally chosen routed_device if set
+            const routed_device = current.routed_device ?? inc.routed_device;
+
+            return {
+              ...inc,
+              volume,
+              routed_device,
+            };
           });
           return { apps: merged };
         });
