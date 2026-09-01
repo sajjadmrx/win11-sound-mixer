@@ -118,12 +118,15 @@ cd win11-sound-mixer
 
 # Install frontend dependencies
 npm install
+bun install
 
 # Run development server (Frontend + Rust Backend)
 npm run tauri dev
+bun tauri dev
 
 # Build production binary
 npm run tauri build
+bun tauri build
 ```
 
 ---
