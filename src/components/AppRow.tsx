@@ -36,7 +36,7 @@ export function AppRow({ app }: { app: AppInfo }) {
         icon={icon}
         className="h-8 w-8 shrink-0 rounded-lg"
       />
-      <div className="min-w-0 flex-1 basis-36">
+      <div className="w-[180px] min-w-0 shrink-0">
         <div className="truncate text-[13px] font-medium leading-tight text-foreground/95">
           {app.display_name}
           {app.pid !== 0 && (
@@ -50,17 +50,11 @@ export function AppRow({ app }: { app: AppInfo }) {
         </div>
       </div>
 
-      <div className="hidden w-[70px] shrink-0 justify-center sm:flex">
+      <div className="hidden w-[60px] shrink-0 justify-center sm:flex">
         <AudioBars peak={app.peak} active={app.active} />
       </div>
 
-      <VolumeLevelIcon
-        volume={app.volume}
-        muted={app.mute}
-        className="hidden shrink-0 text-muted-foreground md:block"
-      />
-
-      <div className="flex min-w-0 flex-1 basis-32 items-center" onWheel={onWheel}>
+      <div className="flex min-w-[120px] flex-1 items-center" onWheel={onWheel}>
         <VolumeSlider
           value={[app.volume]}
           min={0}
