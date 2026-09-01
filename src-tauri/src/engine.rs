@@ -297,7 +297,7 @@ impl Engine {
                 Err(RecvTimeoutError::Disconnected) => break,
             }
             let now = Instant::now();
-            if now.duration_since(self.last_struct_poll) > Duration::from_millis(1200) {
+            if now.duration_since(self.last_struct_poll) > Duration::from_millis(3000) {
                 self.refresh_endpoints();
                 self.refresh_devices();
                 self.refresh_sessions();
@@ -542,85 +542,106 @@ impl Engine {
 
 impl Engine {
     fn refresh_sessions(&mut self) {
-        let Some(mgr) = self.session_mgr.clone() else { return };
+        let Some(enumerator) = self.enumerator.clone() else { return };
         unsafe {
-            let enumr: IAudioSessionEnumerator = match mgr.GetSessionEnumerator() {
-                Ok(e) => e,
-                Err(err) => {
-                    log(&format!("GetSessionEnumerator failed: {err}"));
-                    return;
-                }
+            // Enumerate all active audio devices to capture audio sessions across all endpoints
+            let coll: IMMDeviceCollection = match enumerator.EnumAudioEndpoints(
+                eRender,
+                windows::Win32::Media::Audio::DEVICE_STATE(DEVICE_STATEMASK_ALL),
+            ) {
+                Ok(c) => c,
+                Err(_) => return,
             };
-            let count = enumr.GetCount().unwrap_or(0);
+            let count = coll.GetCount().unwrap_or(0);
             let mut seen: HashSet<String> = HashSet::new();
-            for i in 0..count {
-                let control: IAudioSessionControl = match enumr.GetSession(i) {
-                    Ok(c) => c,
-                    Err(_) => continue,
-                };
-                let control2: IAudioSessionControl2 = match control.cast() {
-                    Ok(c) => c,
-                    Err(_) => continue,
-                };
-                let sid = match control2.GetSessionInstanceIdentifier() {
-                    Ok(id) => pw_to_string(id),
-                    Err(_) => format!("session-{i}"),
-                };
-                seen.insert(sid.clone());
-                if self.sessions.contains_key(&sid) {
-                    continue;
-                }
-                let simple: ISimpleAudioVolume = match control.cast() {
-                    Ok(s) => s,
-                    Err(_) => continue,
-                };
-                let meter: Option<IAudioMeterInformation> = control.cast().ok();
-                let is_system = control2.IsSystemSoundsSession() == windows::Win32::Foundation::S_OK;
-                let pid = control2.GetProcessId().unwrap_or(0);
-                let exe = if is_system || pid == 0 {
-                    "system".to_string()
-                } else {
-                    crate::icons::exe_path_for_pid(pid)
-                        .as_deref()
-                        .map(|p| {
-                            std::path::Path::new(p)
-                                .file_stem()
-                                .map(|s| s.to_string_lossy().to_lowercase())
-                                .unwrap_or_default()
-                        })
-                        .filter(|s| !s.is_empty())
-                        .unwrap_or(format!("pid{pid}"))
-                };
-                let volume = simple.GetMasterVolume().unwrap_or(1.0) * 100.0;
-                let mute = simple.GetMute().map(|m| m.as_bool()).unwrap_or(false);
-                // Register per-session event callback (event-driven updates).
-                let sid_key = sid.clone();
-                let ev = SessionEvents { tx: self.tx.clone(), sid: sid_key.clone() };
-                let ev: IAudioSessionEvents = ev.into();
-                let _ = control.RegisterAudioSessionNotification(&ev);
 
-                let routing = self.store.get().routing.get(&exe).cloned();
-                let is_new_app = !self.apps.contains_key(&exe);
-                self.sessions.insert(
-                    sid_key,
-                    SessionHandle {
-                        control,
-                        control2: Some(control2),
-                        simple,
-                        meter,
-                        events: ev,
-                        sid,
-                        exe: exe.clone(),
-                        volume,
-                        mute,
-                        peak: 0.0,
-                    },
-                );
-                self.update_app_agg(&exe);
-                if is_new_app {
-                    self.on_app_started(&exe, routing);
+            for dev_idx in 0..count {
+                let dev: IMMDevice = match coll.Item(dev_idx) {
+                    Ok(d) => d,
+                    Err(_) => continue,
+                };
+                let dev_id = match dev.GetId() {
+                    Ok(id) => pw_to_string(id),
+                    Err(_) => continue,
+                };
+                let mgr: IAudioSessionManager2 = match dev.Activate(CLSCTX_ALL, None) {
+                    Ok(m) => m,
+                    Err(_) => continue,
+                };
+                let enumr: IAudioSessionEnumerator = match mgr.GetSessionEnumerator() {
+                    Ok(e) => e,
+                    Err(_) => continue,
+                };
+                let sess_count = enumr.GetCount().unwrap_or(0);
+                for i in 0..sess_count {
+                    let control: IAudioSessionControl = match enumr.GetSession(i) {
+                        Ok(c) => c,
+                        Err(_) => continue,
+                    };
+                    let control2: IAudioSessionControl2 = match control.cast() {
+                        Ok(c) => c,
+                        Err(_) => continue,
+                    };
+                    let sid = match control2.GetSessionInstanceIdentifier() {
+                        Ok(id) => pw_to_string(id),
+                        Err(_) => format!("session-{dev_idx}-{i}"),
+                    };
+                    seen.insert(sid.clone());
+                    if self.sessions.contains_key(&sid) {
+                        continue;
+                    }
+                    let simple: ISimpleAudioVolume = match control.cast() {
+                        Ok(s) => s,
+                        Err(_) => continue,
+                    };
+                    let meter: Option<IAudioMeterInformation> = control.cast().ok();
+                    let is_system = control2.IsSystemSoundsSession() == windows::Win32::Foundation::S_OK;
+                    let pid = control2.GetProcessId().unwrap_or(0);
+                    let exe = if is_system || pid == 0 {
+                        "system".to_string()
+                    } else {
+                        crate::icons::exe_path_for_pid(pid)
+                            .as_deref()
+                            .map(|p| {
+                                std::path::Path::new(p)
+                                    .file_stem()
+                                    .map(|s| s.to_string_lossy().to_lowercase())
+                                    .unwrap_or_default()
+                            })
+                            .filter(|s| !s.is_empty())
+                            .unwrap_or(format!("pid{pid}"))
+                    };
+                    let volume = simple.GetMasterVolume().unwrap_or(1.0) * 100.0;
+                    let mute = simple.GetMute().map(|m| m.as_bool()).unwrap_or(false);
+                    let sid_key = sid.clone();
+                    let ev = SessionEvents { tx: self.tx.clone(), sid: sid_key.clone() };
+                    let ev: IAudioSessionEvents = ev.into();
+                    let _ = control.RegisterAudioSessionNotification(&ev);
+
+                    let routing = self.store.get().routing.get(&exe).cloned();
+                    let is_new_app = !self.apps.contains_key(&exe);
+                    self.sessions.insert(
+                        sid_key,
+                        SessionHandle {
+                            control,
+                            control2: Some(control2),
+                            simple,
+                            meter,
+                            events: ev,
+                            sid,
+                            exe: exe.clone(),
+                            volume,
+                            mute,
+                            peak: 0.0,
+                        },
+                    );
+                    self.update_app_agg(&exe);
+                    if is_new_app {
+                        self.on_app_started(&exe, routing);
+                    }
                 }
             }
+
             // Remove sessions that disappeared.
             let gone: Vec<String> = self
                 .sessions
@@ -751,18 +772,43 @@ impl Engine {
 
     fn set_app_volume(&mut self, id: &str, volume: f32, learn: bool) {
         let v = self.clamp_app_volume(id, volume);
-        for sess in self.sessions.values_mut().filter(|s| s.exe == id) {
-            let _ = unsafe { sess.simple.SetMasterVolume(v / 100.0, std::ptr::null()) };
-            sess.volume = v;
-            self.suppressed.insert(sess.sid.clone());
+        log(&format!("set_app_volume: id={}, volume={}, clamped={}", id, volume, v));
+        let mut matched = 0;
+        let mut pids = HashSet::new();
+
+        // 1. First find PIDs of the target app
+        for sess in self.sessions.values() {
+            if sess.exe == id || sess.sid == id {
+                if let Some(c2) = &sess.control2 {
+                    if let Ok(pid) = unsafe { c2.GetProcessId() } {
+                        if pid != 0 {
+                            pids.insert(pid);
+                        }
+                    }
+                }
+            }
         }
+
+        // 2. Set volume on all sessions matching exe, sid, OR pid
+        for sess in self.sessions.values_mut() {
+            let sess_pid = sess.control2.as_ref().and_then(|c| unsafe { c.GetProcessId() }.ok()).unwrap_or(0);
+            let is_match = sess.exe == id || sess.sid == id || (sess_pid != 0 && pids.contains(&sess_pid));
+            if is_match {
+                matched += 1;
+                let res = unsafe { sess.simple.SetMasterVolume(v / 100.0, std::ptr::null()) };
+                log(&format!("set_app_volume on sess {} (pid {}): res={:?}", sess.sid, sess_pid, res));
+                sess.volume = v;
+                self.suppressed.insert(sess.sid.clone());
+            }
+        }
+        log(&format!("set_app_volume: matched {} sessions for id {}", matched, id));
         if let Some(app) = self.apps.get_mut(id) {
             app.volume = v;
         }
         // Learn per-device memory (skipped while a temporary scene is active).
         let cfg = self.store.get();
         if learn && cfg.settings.per_device_memory && !self.focus_active && !self.duck_active {
-            let device = self.current_device_for(id).unwrap_or_else(|| "default".into());
+            let _device = self.current_device_for(id).unwrap_or_else(|| "default".into());
             self.due.retain(|t| !matches!(&t.kind, DueKind::ApplyMemory { exe, .. } if exe == id));
             // Defer disk persist to avoid blocking disk I/O on every slider drag
         }
@@ -771,12 +817,14 @@ impl Engine {
     fn set_app_mute(&mut self, id: &str, mute: bool) {
         log(&format!("set_app_mute: id={}, mute={}", id, mute));
         unsafe {
-            for sess in self.sessions.values_mut().filter(|s| s.exe == id) {
-                if let Err(e) = sess.simple.SetMute(mute, std::ptr::null()) {
-                    log(&format!("SetMute failed on session {}: {:?}", sess.sid, e));
+            for sess in self.sessions.values_mut() {
+                if sess.exe == id || sess.sid == id {
+                    if let Err(e) = sess.simple.SetMute(mute, std::ptr::null()) {
+                        log(&format!("SetMute failed on session {}: {:?}", sess.sid, e));
+                    }
+                    sess.mute = mute;
+                    self.suppressed.insert(sess.sid.clone());
                 }
-                sess.mute = mute;
-                self.suppressed.insert(sess.sid.clone());
             }
         }
         if let Some(app) = self.apps.get_mut(id) {

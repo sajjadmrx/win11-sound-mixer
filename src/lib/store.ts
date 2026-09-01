@@ -229,29 +229,7 @@ export const useStore = create<MixeroStore>((set, get) => ({
     set((s) => ({
       apps: s.apps.map((a) => (a.id === id ? { ...a, volume: vol } : a)),
     }));
-
-    const last = lastSentTime[id] ?? 0;
-    const now = Date.now();
-    if (now - last > 30) {
-      lastSentTime[id] = now;
-      if (pendingCalls[id]) {
-        clearTimeout(pendingCalls[id].timer);
-        delete pendingCalls[id];
-      }
-      api.setAppVolume(id, vol);
-    } else {
-      if (pendingCalls[id]) {
-        clearTimeout(pendingCalls[id].timer);
-      }
-      pendingCalls[id] = {
-        vol,
-        timer: setTimeout(() => {
-          lastSentTime[id] = Date.now();
-          api.setAppVolume(id, vol);
-          delete pendingCalls[id];
-        }, 30),
-      };
-    }
+    api.setAppVolume(id, vol);
   },
   toggleAppMute: (id) => {
     const app = get().apps.find((a) => a.id === id);

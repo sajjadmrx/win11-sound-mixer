@@ -1,4 +1,4 @@
-import type React from "react";
+import React, { memo } from "react";
 import { useStore } from "@/lib/store";
 import type { AppInfo } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -6,10 +6,9 @@ import { AppIcon } from "@/components/AppIcon";
 import { AudioBars } from "@/components/AudioBars";
 import { DevicePicker } from "@/components/DevicePicker";
 import { VolumeSlider } from "@/components/ui/slider";
-import { VolumeLevelIcon } from "@/components/VolumeLevelIcon";
 import { MuteButton } from "@/components/MuteButton";
 
-export function AppRow({ app }: { app: AppInfo }) {
+export const AppRow = memo(function AppRow({ app }: { app: AppInfo }) {
   const icons = useStore((s) => s.icons);
   const setAppVolume = useStore((s) => s.setAppVolume);
   const toggleAppMute = useStore((s) => s.toggleAppMute);
@@ -88,9 +87,9 @@ export function AppRow({ app }: { app: AppInfo }) {
       />
     </div>
   );
-}
+});
 
-export function AppCard({ app }: { app: AppInfo }) {
+export const AppCard = memo(function AppCard({ app }: { app: AppInfo }) {
   const icons = useStore((s) => s.icons);
   const setAppVolume = useStore((s) => s.setAppVolume);
   const toggleAppMute = useStore((s) => s.toggleAppMute);
@@ -140,11 +139,6 @@ export function AppCard({ app }: { app: AppInfo }) {
       </div>
 
       <div className="flex items-center gap-2" onWheel={onWheel}>
-        <VolumeLevelIcon
-          volume={app.volume}
-          muted={app.mute}
-          className="shrink-0 text-muted-foreground"
-        />
         <div className="min-w-0 flex-1">
           <VolumeSlider
             value={[app.volume]}
@@ -167,4 +161,4 @@ export function AppCard({ app }: { app: AppInfo }) {
       </div>
     </div>
   );
-}
+});

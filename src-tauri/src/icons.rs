@@ -54,6 +54,39 @@ pub fn exe_path_for_pid(pid: u32) -> Option<String> {
                 return Some(path);
             }
         }
+
+        // Fallback: Use Process32FirstW/Process32NextW snapshot to get exe name if OpenProcess failed
+        use windows::Win32::System::Diagnostics::ToolHelp::{
+            CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+            TH32CS_SNAPPROCESS,
+        };
+        if let Ok(snap) = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) {
+            let mut pe = PROCESSENTRY32W {
+                dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
+                ..Default::default()
+            };
+            if Process32FirstW(snap, &mut pe).is_ok() {
+                loop {
+                    if pe.th32ProcessID == pid {
+                        let len = pe.szExeFile.iter().position(|&c| c == 0).unwrap_or(pe.szExeFile.len());
+                        let name = String::from_utf16_lossy(&pe.szExeFile[..len]);
+                        let _ = windows::Win32::Foundation::CloseHandle(snap);
+                        if !name.is_empty() {
+                            if let Ok(mut guard) = EXE_PATH_CACHE.lock() {
+                                guard.get_or_insert_with(HashMap::new).insert(pid, name.clone());
+                            }
+                            return Some(name);
+                        }
+                        break;
+                    }
+                    if Process32NextW(snap, &mut pe).is_err() {
+                        break;
+                    }
+                }
+            }
+            let _ = windows::Win32::Foundation::CloseHandle(snap);
+        }
+
         None
     }
 }
